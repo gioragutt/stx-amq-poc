@@ -18,8 +18,8 @@ const sendMessageAndAwaitResponse = (client, message, destinationQueue, response
   new Promise((resolve, reject) => {
     const correlationId = uuid()
     const sendHeaders = {
-      ...headers,
       ...defaultHeaders,
+      ...headers,
       destination: destinationQueue,
       'reply-to': responseQueue,
       'correlation-id': correlationId,
