@@ -9,11 +9,11 @@ const {
   activeMqPassword,
   requestQueue,
   responseQueue,
+  message,
+  timeout,
 } = require('config')
 
-const sendMessageAndAwaitResponse = require('lib/mq')
-
-const message = process.argv.length > 0 ? process.argv.join(' ') : 'no message'
+const {sendRpc} = require('lib/mq')
 
 const connectOptions = {
   host: activeMqHost,
@@ -24,7 +24,6 @@ const connectOptions = {
   },
 }
 
-logger.info('attempting to connect to active mq')
 stompit.connect(connectOptions, (connectionError, client) => {
   if (connectionError) {
     logger.error({connectionError}, 'failed to connect to active mq')
@@ -32,7 +31,13 @@ stompit.connect(connectOptions, (connectionError, client) => {
   }
 
   logger.info(connectOptions, 'connected to active mq')
-  sendMessageAndAwaitResponse(client, {message}, requestQueue, responseQueue)
-    .then(msg => logger.info(msg, 'received message'))
-    .catch(err => logger.error(err, 'god damnit'))
+  sendRpc(client, {message}, requestQueue, responseQueue, {timeout})
+    .then((response) => {
+      logger.info(response, 'received RPC response')
+      client.disconnect()
+    })
+    .catch((error) => {
+      logger.error(error, 'error receiving RPC response')
+      client.disconnect()
+    })
 })
