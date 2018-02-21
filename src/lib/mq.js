@@ -33,7 +33,7 @@ const decodeContent = (content, contentType) =>
  *    if specified above 0, will time out after `timeout` milliseconds if a response is not received
  * @returns {Promise<{headers: Object, body: *}>} the response received, comprised of the headers and the body
  */
-const sendRpc = (client, content, destinationQueue, responseQueue, {headers = {}, timeout = -1} = {}) =>
+const sendRpc = (client, content, destinationQueue, responseQueue, {headers = {}, timeout = 0} = {}) =>
   new Promise((resolve, reject) => {
     const correlationId = uuid()
     const sendHeaders = {
