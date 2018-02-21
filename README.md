@@ -22,7 +22,7 @@ or
 
 * Port `61613` is ActiveMQ's endpoint for the `STOMP` protocol which we are using
 * Port `8161` is the Web Console
-  * Credintials for admin console: `admin` for both username and password
+  * Credentials for admin console: `admin` for both username and password
 * See [rmohr/activemq](https://hub.docker.com/r/rmohr/activemq/) for reference
 
 # Running the POC
@@ -31,7 +31,7 @@ or
 
 `npm start` or `yarn start`.  
 
-This will start the "server-side" of the RPC, aka the side the response to RPC requests
+This will start the "server-side" of the RPC, aka the side that responsds to RPC requests
 
 ## Open terminal for client
 
