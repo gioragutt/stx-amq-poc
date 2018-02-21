@@ -18,11 +18,12 @@ or
 
 # Running ActiveMQ
 
-`docker run -p 61613:61613 -d --name="activemq" rmohr/activemq`
+`docker run -p 61613:61613 -p 8161:8161 -d --name="activemq" rmohr/activemq`
 
-Port `61613` is ActiveMQ's port for the `STOMP` protocol which we are using.
-
-See [rmohr/activemq](https://hub.docker.com/r/rmohr/activemq/) for reference
+* Port `61613` is ActiveMQ's endpoint for the `STOMP` protocol which we are using
+* Port `8161` is the Web Console
+  * Credintials for admin console: `admin` for both username and password
+* See [rmohr/activemq](https://hub.docker.com/r/rmohr/activemq/) for reference
 
 # Running the POC
 
