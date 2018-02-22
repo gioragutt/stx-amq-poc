@@ -6,7 +6,7 @@
   "scripts": {
     "start": "nodemon -e js . | pino",
     "serve": "node . | pino",
-    "client": "bash client.sh",
+    "client": "node src/client.js",
     "serve:debug": "node --inspect-brk . | pino",
     "lint:fix": "prettier-eslint --write \"src/**/*.js\" && eslint src"
   },
@@ -16,10 +16,10 @@
   "dependencies": {
     "@welldone-software/node-toolbelt": "^1.2.0",
     "app-module-path": "^2.2.0",
-    "commander": "^2.14.1",
     "lodash": "^4.17.5",
     "stompit": "^0.25.0",
-    "uuid": "^3.2.1"
+    "uuid": "^3.2.1",
+    "vorpal": "^1.12.0"
   },
   "devDependencies": {
     "eslint": "^4.18.0",
