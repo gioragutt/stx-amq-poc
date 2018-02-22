@@ -1,9 +1,12 @@
 require('app-module-path').addPath(__dirname)
 
-const stompit = require('stompit')
 const {loggers: {logger}} = require('@welldone-software/node-toolbelt')
-const {activeMqHost, activeMqPort, activeMqUsername, activeMqPassword, requestQueue} = require('config')
-const {respondToRpc} = require('lib/mq')
+const {activeMqHost, activeMqPort, activeMqUsername, activeMqPassword, logLevel} = require('config')
+const QueueRpcServer = require('lib/server')
+const QueueRpcRouter = require('lib/router')
+const Database = require('app/database')
+
+logger.level = logLevel
 
 const connectOptions = {
   host: activeMqHost,
@@ -14,23 +17,20 @@ const connectOptions = {
   },
 }
 
-stompit.connect(connectOptions, (connectionError, client) => {
-  if (connectionError) {
-    logger.error({connectionError}, 'failed to connect to active mq')
-    return
-  }
+const db = new Database()
 
-  logger.info(connectOptions, 'connected to active mq')
-  client.subscribe({destination: requestQueue}, (subscriptionError, message) => {
-    if (subscriptionError) {
-      logger.error(subscriptionError, 'subscription error')
-      return
-    }
+const readWriteRouter = new QueueRpcRouter()
+readWriteRouter.method('add', ({body: number}) => db.add(number))
+readWriteRouter.method('remove', ({body: number}) => db.remove(number))
+readWriteRouter.method('clear', () => db.clear())
 
-    logger.info({headers: message.headers}, 'received message')
+const readOnlyRouter = new QueueRpcRouter()
+readOnlyRouter.method('query', () => db.query())
 
-    respondToRpc(client, message)
-      .catch(error => logger.error(error, 'error responding to rpc'))
-      .then(response => logger.info(response, 'successfully responded to rpc'))
-  })
-})
+const server = new QueueRpcServer()
+server.use(readWriteRouter)
+server.use(readOnlyRouter)
+
+server.start(connectOptions)
+  .then(config => logger.info(config, 'connected to active mq'))
+  .catch(error => logger.error(error, 'failed to connect to active mq'))

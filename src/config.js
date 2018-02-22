@@ -5,8 +5,5 @@ module.exports = mapEnv({
   activeMqPort: 61614,
   activeMqUsername: undefined,
   activeMqPassword: undefined,
-  requestQueue: 'Request',
-  responseQueue: 'Response',
-  message: 'echo test',
-  timeout: 3000,
+  logLevel: 'info',
 })

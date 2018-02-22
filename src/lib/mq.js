@@ -1,20 +1,61 @@
-const {loggers: {logger}} = require('@welldone-software/node-toolbelt')
 const uuid = require('uuid')
+const {encodeContent, decodeContent, toStompHeaders, fromStompHeaders} = require('./utils')
+
+const parseMessage = message => new Promise((resolve, reject) =>
+  message.readString('utf-8', (messageParseError, body) => {
+    if (messageParseError) {
+      reject(messageParseError)
+      return
+    }
+    resolve(decodeContent(body, fromStompHeaders(message.headers).contentType))
+  }))
 
 const defaultHeaders = {
-  'content-type': 'application/json',
+  contentType: 'application/json',
 }
 
 const sendFrame = (client, headers, message) => {
-  const frame = client.send(headers)
-  frame.write(message)
+  const stompHeaders = toStompHeaders(headers)
+  const frame = client.send(stompHeaders)
+  frame.write(encodeContent(message, headers.contentType))
   frame.end()
 }
 
-const encodeContent = content =>
-  (typeof content === 'object' ? JSON.stringify(content) : content)
-const decodeContent = (content, contentType) =>
-  (contentType === 'application/json' ? JSON.parse(content) : content)
+const awaitRpcResponse = (resolve, reject, client, destination) => {
+  const subscription = client.subscribe({destination}, (subscriptionError, message) => {
+    if (subscriptionError) {
+      reject(subscriptionError)
+      return
+    }
+
+    subscription.unsubscribe()
+    message.readString('utf-8', (messageError, responseContent) => {
+      if (messageError) {
+        reject(messageError)
+        return
+      }
+
+      const headers = fromStompHeaders(message.headers)
+      const body = decodeContent(responseContent, headers.contentType)
+      const response = {headers, body}
+      if (headers.ok === 'false') {
+        reject(response)
+      } else {
+        resolve(response)
+      }
+    })
+  })
+  return subscription
+}
+
+const setRequestTimeout = (reject, timeout, subscription) => {
+  if (timeout > 0) {
+    setTimeout(() => {
+      subscription.unsubscribe()
+      reject(new Error(`RPC request timed out after ${timeout} ms`))
+    }, timeout)
+  }
+}
 
 /**
  * Sends a message and awaits a response
@@ -40,52 +81,19 @@ const sendRpc = (client, content, destinationQueue, responseQueue, {headers = {}
       ...defaultHeaders,
       ...headers,
       destination: destinationQueue,
-      'reply-to': responseQueue,
-      'correlation-id': correlationId,
+      replyTo: responseQueue,
+      correlationId,
     }
 
-    const messageToSend = encodeContent(content)
-    sendFrame(client, sendHeaders, messageToSend)
+    sendFrame(client, sendHeaders, content)
 
-    if (timeout > 0) {
-      setTimeout(() => reject(new Error(`RPC request timed out after ${timeout} ms`)), timeout)
-    }
-
-    client.subscribe({destination: responseQueue}, (subscriptionError, message) => {
-      if (subscriptionError) {
-        logger.error(subscriptionError, 'subscription error?')
-        reject(subscriptionError)
-        return
-      }
-
-      message.readString('utf-8', (messageError, responseContent) => {
-        if (messageError) {
-          logger.error(messageError, 'message read error?')
-          reject(messageError)
-          return
-        }
-
-        const body = decodeContent(responseContent, message.headers['content-type'])
-        const response = {headers: message.headers, body}
-        resolve(response)
-      })
-    })
+    const subscription = awaitRpcResponse(resolve, reject, client, responseQueue)
+    setRequestTimeout(reject, timeout, subscription)
   })
 
-const extractResponseHeaders = (requestHeaders) => {
-  const {
-    'reply-to': destination,
-    'correlation-id': correlationId,
-    'content-type': contentType,
-  } = requestHeaders
-
-  const headers = {
-    destination,
-    'correlation-id': correlationId,
-    'content-type': contentType,
-  }
-
-  return headers
+const responseHeaders = (requestHeaders) => {
+  const {'reply-to': destination, ...rest} = requestHeaders
+  return {...rest, destination}
 }
 
 /**
@@ -94,21 +102,26 @@ const extractResponseHeaders = (requestHeaders) => {
  * @param {stream.Readable} message message from queue
  * @returns {Promise<{headers: Object, body: *}>} the response sent, comprised of the headers and the body
  */
-const respondToRpc = (client, message) => new Promise((resolve, reject) =>
-  message.readString('utf-8', (error, body) => {
-    if (error) {
-      reject(error)
-      return
-    }
-
-    const headers = extractResponseHeaders(message.headers)
-
-    sendFrame(client, headers, body)
-    resolve({headers, body})
-  }))
+const respondToRpc = (client, message, handler, body) => new Promise((resolve, reject) => {
+  const headers = fromStompHeaders(responseHeaders(message.headers))
+  Promise.resolve()
+    .then(() => handler({body, headers}))
+    .then((result) => {
+      result = result || 'success'
+      const successHeaders = {...headers, ok: true}
+      sendFrame(client, successHeaders, result)
+      resolve({headers: successHeaders, result})
+    })
+    .catch((handlerError) => {
+      const {message: errorMessage, context} = handlerError
+      const failureHeaders = {...headers, ok: false}
+      sendFrame(client, failureHeaders, {message: errorMessage, context})
+      reject(handlerError)
+    })
+})
 
 module.exports = {
+  parseMessage,
   sendRpc,
-  sendFrame,
   respondToRpc,
 }
