@@ -1,14 +1,33 @@
 # Intoduction
 
-This POC project implements RPC using `ActiveMQ` as a message queue.
+* This POC project implements RPC using `ActiveMQ` as a message queue.
 
-The POC implements an API that allows the RPC sender to send the RPC and receive a promise back,  
+* The POC implements an API that allows the RPC sender to send the RPC and receive a promise back,  
 which allows writing clear and simple code, without spreading your logic across your code (due to the callback-y style of handling messages in PUBSUB).
+
+# Client and Server
+
+The server in acts as a small database for storing a list of values, and supports the following commands: `ADD`, `REMOVE`, `QUERY`, `CLEAR`
+
+The client is an interactive terminal, so you can just run commands which are sent to the server.
+
+Each command receives an optional `-t/--timeout <ms>` option, defaulting to `3000 ms`
+
+### Available Commands
+  * `add <number>`  
+  alias: `a`
+  * `remove <number>`  
+  alias: `rm`
+  * `query`  
+  alias: `ls`
+  * `clear`  
+  alias: `c`
 
 # Technology
 
-* The `stompit` library is used to communicate with the ActiveMQ server via the `STOMP` protocol.
+* `stompit` library - used to communicate with the ActiveMQ server via the `STOMP` protocol.
 * For running an ActiveMQ instance, we use the `rmohr/activemq` docker image
+* `vorpal` library - used to create an interactive terminal for the client
 
 # Installation
 
@@ -35,33 +54,32 @@ This will start the "server-side" of the RPC, aka the side that responsds to RPC
 
 ## Open terminal for client
 
-```bash
-ENV1=VAL1 ... ENVN=VALN npm run client
-```
-will send a message
+`npm run client`
 
-ENV(1-N) stand for variables for the client (due to pino, cannot pass command line variables)
+This will open up an interactive terminal for you to run commands.
+
+Start by running the `help` command to see all available commands
+
+
 
 Useful variables:
 
-* **MESSAGE** - the message to send to in the RPC request
-  * default value: **'echo test'**
-* **TIMEOUT** - when given value above 0, will time out the request if the given time has passed
-  * unit: **milliseconds**
-  * default value: **3000**
+* **LOG_LEVEL** - sets up the `pino` logger level
+  * default value: **info**
+  * available values: `fatal`, `error`, `warn`, `info`, `debug`, `trace`
 
 *Example* -
+
 ```bash
-TIMEOUT=100 MESSAGE="this is ducking awesome!" npm run client
+LOG_LEVEL=debug  npm run client
 ```
 
 # All environment variables (.env.example)
+
+These variables are available for both client and server
 
 * **ACTIVE_MQ_HOST** - host of the ActiveMQ instance (f.e *localhost*)
 * **ACTIVE_MQ_PORT** - port of the ActiveMQ instance `STOMP` endpoint (f.e *61613*)
 * **ACTIVE_MQ_USERNAME** - `optional` username for authentification
 * **ACTIVE_MQ_PASSWORD** - `optional` password for authentification
-* **REQUEST_QUEUE** - name of the queue to which the requests will be sent (f.e *Requests*)
-* **RESPONSE_QUEUE** - name of the queue to which the responses will be sent (f.e *Responses*)
-* **MESSAGE** - explained above, ***client use only***
-* **TIMEOUT** - explained above, ***client use only***
+* **LOG_LEVEL** - explained above
