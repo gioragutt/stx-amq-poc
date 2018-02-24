@@ -3,7 +3,7 @@ const RpcError = require('lib/exceptions')
 
 const tryParseNumber = (number, method) => {
   // eslint-disable-next-line no-restricted-globals
-  if (!number || isNaN(number)) {
+  if ((!number && number !== 0) || isNaN(number)) {
     throw new RpcError(`Invalid number sent to ${method}`, {number})
   }
 

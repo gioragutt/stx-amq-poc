@@ -12,10 +12,10 @@ const commandLine = (commands, {delimiter} = {}) => {
       .command(command.command, command.description)
       .alias(command.alias)
       .option('-t, --timeout <timeout>')
-      .action(function action(argsAndOptions, callback) {
+      .action((argsAndOptions, callback) => {
         const {options, ...args} = argsAndOptions
         Promise.resolve()
-          .then(() => command.action(this.log.bind(this), args, options))
+          .then(() => command.action(args, options))
           .then(callback)
       })
   })

@@ -1,8 +1,13 @@
 require('app-module-path').addPath(__dirname)
 
+const pino = require('pino')
+
+const pretty = pino.pretty()
+pretty.pipe(process.stdout)
+const logger = pino({}, pretty)
+
 const cli = require('./lib/cli')
 
-const {loggers: {logger}} = require('@welldone-software/node-toolbelt')
 const {
   activeMqHost,
   activeMqPort,
@@ -25,17 +30,16 @@ const defaultOptions = {
   timeout: 3000,
 }
 
-const callMethodOnClient = (log, client, methodName, args, options) => {
+const callMethodOnClient = (client, methodName, args, options) => {
   methodName = methodName.toUpperCase()
   return client.callMethod(methodName, args || {}, {...defaultOptions, ...options})
-    .then(({body}) => log(`> ${body}`))
-    .catch(log)
+    .then(({body}) => logger.info(body))
+    .catch(e => logger.error(e))
 }
 
 const callMethod =
-  (client, method, argsMapper = a => a) =>
-    (log, args, options) =>
-      callMethodOnClient(log, client, method, argsMapper(args), options)
+  (client, method, argsMapper = a => a) => (args, options) =>
+    callMethodOnClient(client, method, argsMapper(args), options)
 
 logger.info('Connecting to ActiveMQ')
 QueueRpcClient.connect(connectOptions).then((client) => {
