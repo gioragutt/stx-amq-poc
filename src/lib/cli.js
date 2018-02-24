@@ -7,22 +7,30 @@ const Vorpal = require('vorpal')
  */
 const commandLine = (commands, {delimiter} = {}) => {
   const vorpal = Vorpal()
-  commands.forEach((command) => {
-    vorpal
-      .command(command.command, command.description)
-      .alias(command.alias)
+  commands.forEach((desc) => {
+    const command = vorpal.command(desc.command, desc.description)
+    if (desc.alias) {
+      command.alias(desc.alias)
+    }
+    if (desc.autocomplete) {
+      command.autocomplete(desc.autocomplete)
+    }
+    command
       .option('-t, --timeout <timeout>')
       .action((argsAndOptions, callback) => {
         const {options, ...args} = argsAndOptions
         Promise.resolve()
-          .then(() => command.action(args, options))
+          .then(() => desc.action(args, options))
           .then(callback)
       })
   })
 
+  const delimiterContent = () => `[${(new Date()).toLocaleString()}] ${delimiter || '$~>'} `
   vorpal
-    .delimiter(delimiter || '$~>')
+    .delimiter(delimiterContent())
     .show()
+
+  setInterval(() => vorpal.ui.delimiter(delimiterContent()), 1000)
 }
 
 module.exports = commandLine

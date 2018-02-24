@@ -76,5 +76,5 @@ QueueRpcClient.connect(connectOptions, {logger}).then((client) => {
     },
   ]
 
-  cli(commands, {delimiter: 'ActiveMq$'})
+  cli(commands, {delimiter: 'ActiveMq $'})
 }).catch(e => logger.error(e, 'failed to connect to ActiveMQ'))
