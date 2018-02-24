@@ -5,6 +5,12 @@
 * The POC implements an API that allows the RPC sender to send the RPC and receive a promise back,  
 which allows writing clear and simple code, without spreading your logic across your code (due to the callback-y style of handling messages in PUBSUB).
 
+* The server API tries to resemble that of express, where you create a server, can attack routers, and then listen.  
+There isn't much logic to routers now, but different behaviors can be implemented to each router (f.e authentication, middlewares, etc...)
+
+* The client API resembles that of something like `mongodb`, where you use `MongoClient.connect` which returns a client, on which you can call methods to perform actions on the server.
+  * Currently, the only method to interact with the server is the `callMethod` method, which expects a response from the server(aka `RPC`)
+
 # Client and Server
 
 The server in acts as a small database for storing a list of values, and supports the following commands: `ADD`, `REMOVE`, `QUERY`, `CLEAR`
