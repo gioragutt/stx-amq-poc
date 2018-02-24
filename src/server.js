@@ -20,12 +20,13 @@ const connectOptions = {
 const db = new Database()
 
 const readWriteRouter = new QueueRpcRouter()
-readWriteRouter.method('add', ({body: number}) => db.add(number))
-readWriteRouter.method('remove', ({body: number}) => db.remove(number))
+readWriteRouter.method('add', ({body: {number}}) => db.add(number))
+readWriteRouter.method('remove', ({body: {number}}) => db.remove(number))
 readWriteRouter.method('clear', () => db.clear())
 
 const readOnlyRouter = new QueueRpcRouter()
 readOnlyRouter.method('query', () => db.query())
+readOnlyRouter.method('echo', ({body: {message}}) => message)
 
 const server = new QueueRpcServer()
 server.use(readWriteRouter)

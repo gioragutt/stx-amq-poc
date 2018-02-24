@@ -15,35 +15,44 @@ class Database {
     this.list = new Set()
   }
 
+  get items() {
+    return `[${Array.from(this.list).join(', ')}]`
+  }
+
   add(number) {
     number = tryParseNumber(number, 'ADD')
     if (this.list.has(number)) {
       logger.debug(`${number} already in the list`)
-    } else {
-      logger.info(`Adding ${number} to the list`)
-      this.list.add(number)
+      return `${number} already in the list`
     }
+
+    logger.info(`Adding ${number} to the list`)
+    this.list.add(number)
+    return this.items
   }
 
   remove(number) {
     number = tryParseNumber(number, 'REMOVE')
     if (!this.list.has(number)) {
       logger.debug(`${number} not in the list`)
-    } else {
-      logger.info(`Removing ${number} from the list`)
-      this.list.delete(number)
+      return this.items
     }
+
+    logger.info(`Removing ${number} from the list`)
+    this.list.delete(number)
+    return this.items
   }
 
   query() {
-    const result = Array.from(this.list)
+    const result = this.items
     logger.debug({result}, 'query result')
     return result
   }
 
   clear() {
-    logger.info('clearing the list')
+    logger.info('Clearing the list')
     this.list.clear()
+    return this.items
   }
 }
 

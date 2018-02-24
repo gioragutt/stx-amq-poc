@@ -21,17 +21,21 @@ const connectOptions = {
   },
 }
 
-const callMethodOnClient = (log, client, {timeout, ...restOfOptions}, methodName, params) => {
+const defaultOptions = {
+  timeout: 3000,
+}
+
+const callMethodOnClient = (log, client, methodName, args, options) => {
   methodName = methodName.toUpperCase()
-  return client.callMethod(methodName, params || {}, {timeout: timeout || 3000, restOfOptions})
+  return client.callMethod(methodName, args || {}, {...defaultOptions, ...options})
     .then(({body}) => log(`> ${body}`))
     .catch(log)
 }
 
 const callMethod =
-  (client, method, argsMapper = () => undefined) =>
+  (client, method, argsMapper = a => a) =>
     (log, args, options) =>
-      callMethodOnClient(log, client, options, method, argsMapper(args))
+      callMethodOnClient(log, client, method, argsMapper(args), options)
 
 logger.info('Connecting to ActiveMQ')
 QueueRpcClient.connect(connectOptions).then((client) => {
@@ -41,13 +45,13 @@ QueueRpcClient.connect(connectOptions).then((client) => {
       command: 'add <number>',
       description: 'Add a number to the list',
       alias: 'a',
-      action: callMethod(client, 'ADD', a => a.number),
+      action: callMethod(client, 'ADD'),
     },
     {
       command: 'remove <number>',
       description: 'Removes a number from the list',
       alias: 'rm',
-      action: callMethod(client, 'REMOVE', a => a.number),
+      action: callMethod(client, 'REMOVE'),
     },
     {
       command: 'query',
@@ -60,6 +64,10 @@ QueueRpcClient.connect(connectOptions).then((client) => {
       description: 'Clears the list',
       alias: 'c',
       action: callMethod(client, 'CLEAR'),
+    },
+    {
+      command: 'echo <message...>',
+      action: callMethod(client, 'ECHO', ({message, ...rest}) => ({message: message.join(' '), ...rest})),
     },
   ]
 

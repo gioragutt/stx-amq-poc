@@ -8,21 +8,21 @@ class QueueRpcRouter {
 
   /**
    * Adds a handler to a given method
-   * @param {String} name name of the method
+   * @param {String} method name of the method
    * @param {Function} handler callback to handle the request. May be sync or async
    */
-  method(name, handler) {
+  method(method, handler) {
     if (typeof handler !== 'function') {
       const type = Object.prototype.toString.call(handler)
       throw new RpcError(`QueueRpcRouter.method() requires a callback but got a ${type}`)
     }
 
-    name = upperCase(name)
-    if (this.methodHandlers[name]) {
-      throw new RpcError('handler for method already defined', {method: name})
+    method = upperCase(method)
+    if (this.methodHandlers[method]) {
+      throw new RpcError(`handler for method ${method} already defined`)
     }
 
-    this.methodHandlers[name] = handler
+    this.methodHandlers[method] = handler
   }
 }
 
