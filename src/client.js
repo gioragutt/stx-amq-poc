@@ -1,21 +1,22 @@
 require('app-module-path').addPath(__dirname)
 
 const pino = require('pino')
-
-const pretty = pino.pretty()
-pretty.pipe(process.stdout)
-const logger = pino({}, pretty)
-
 const cli = require('./lib/cli')
-
 const {
   activeMqHost,
   activeMqPort,
   activeMqUsername,
   activeMqPassword,
+  logLevel,
 } = require('config')
-
 const QueueRpcClient = require('./lib/client')
+
+
+const pretty = pino.pretty()
+pretty.pipe(process.stdout)
+const logger = pino({}, pretty)
+
+logger.level = logLevel
 
 const connectOptions = {
   host: activeMqHost,
@@ -42,7 +43,7 @@ const callMethod =
     callMethodOnClient(client, method, argsMapper(args), options)
 
 logger.info('Connecting to ActiveMQ')
-QueueRpcClient.connect(connectOptions).then((client) => {
+QueueRpcClient.connect(connectOptions, {logger}).then((client) => {
   logger.info('Connected')
   const commands = [
     {

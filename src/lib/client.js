@@ -1,5 +1,6 @@
 const stompit = require('stompit')
 const {sendRpc} = require('./mq')
+const {loggers: {logger: wdLogger}} = require('@welldone-software/node-toolbelt')
 const {requestQueueName, responseQueueName} = require('./utils')
 
 class QueueRpcClient {
@@ -8,9 +9,10 @@ class QueueRpcClient {
    * @param {*} stompitClient an instance of the `stompit`
    * @requires stompit
    */
-  constructor(stompitClient) {
+  constructor(stompitClient, {logger = wdLogger} = {}) {
     this.baseQueueName = 'METHOD'
     this.stompit = stompitClient
+    this.logger = logger.child({name: 'QueueRpcClient'})
   }
 
   /**
@@ -19,6 +21,7 @@ class QueueRpcClient {
    * @param {Function} listener event handler
    */
   on(type, listener) {
+    this.logger.debug('listening to event on stompit client', {type, listener})
     this.stompit.on(type, listener)
     return this
   }
@@ -30,6 +33,7 @@ class QueueRpcClient {
    * @param {Object} options optional metadata, f.e headers and timeout
    */
   callMethod(method, params, options = {}) {
+    this.logger.debug({method, params, options}, 'calling method')
     return sendRpc(
       this.stompit,
       params,
@@ -43,17 +47,18 @@ class QueueRpcClient {
    * Peacefully disconnect the stompit connection
    */
   disconnect() {
+    this.logger.debug('disconnecting client')
     this.stompit.disconnect()
   }
 }
 
-QueueRpcClient.connect = config => new Promise((resolve, reject) =>
+QueueRpcClient.connect = (config, options) => new Promise((resolve, reject) =>
   stompit.connect(config, (error, stompitClient) => {
     if (error) {
       reject(error)
       return
     }
-    resolve(new QueueRpcClient(stompitClient))
+    resolve(new QueueRpcClient(stompitClient, options))
   }))
 
 module.exports = QueueRpcClient
