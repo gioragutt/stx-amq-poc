@@ -1,14 +1,15 @@
 const uuid = require('uuid')
 const {encodeContent, decodeContent, toStompHeaders, fromStompHeaders} = require('./utils')
 
-const parseMessage = message => new Promise((resolve, reject) =>
-  message.readString('utf-8', (messageParseError, body) => {
-    if (messageParseError) {
-      reject(messageParseError)
-      return
-    }
-    resolve(decodeContent(body, fromStompHeaders(message.headers).contentType))
-  }))
+const parseMessage = message =>
+  new Promise((resolve, reject) =>
+    message.readString('utf-8', (messageParseError, body) => {
+      if (messageParseError) {
+        reject(messageParseError)
+        return
+      }
+      resolve(decodeContent(body, fromStompHeaders(message.headers).contentType))
+    }))
 
 const defaultHeaders = {
   contentType: 'application/json',
@@ -102,23 +103,24 @@ const responseHeaders = (requestHeaders) => {
  * @param {stream.Readable} message message from queue
  * @returns {Promise<{headers: Object, body: *}>} the response sent, comprised of the headers and the body
  */
-const respondToRpc = (client, message, handler, body) => new Promise((resolve, reject) => {
-  const headers = fromStompHeaders(responseHeaders(message.headers))
-  Promise.resolve()
-    .then(() => handler({body, headers}))
-    .then((result) => {
-      result = result || 'success'
-      const successHeaders = {...headers, ok: true}
-      sendFrame(client, successHeaders, result)
-      resolve({headers: successHeaders, result})
-    })
-    .catch((handlerError) => {
-      const {message: errorMessage, context} = handlerError
-      const failureHeaders = {...headers, ok: false}
-      sendFrame(client, failureHeaders, {message: errorMessage, context})
-      reject(handlerError)
-    })
-})
+const respondToRpc = (client, message, handler, body) =>
+  new Promise((resolve, reject) => {
+    const headers = fromStompHeaders(responseHeaders(message.headers))
+    Promise.resolve()
+      .then(() => handler({body, headers}))
+      .then((result) => {
+        result = result || 'success'
+        const successHeaders = {...headers, ok: true}
+        sendFrame(client, successHeaders, result)
+        resolve({headers: successHeaders, result})
+      })
+      .catch((handlerError) => {
+        const {message: errorMessage, context} = handlerError
+        const failureHeaders = {...headers, ok: false}
+        sendFrame(client, failureHeaders, {message: errorMessage, context})
+        reject(handlerError)
+      })
+  })
 
 module.exports = {
   parseMessage,

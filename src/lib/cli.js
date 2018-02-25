@@ -15,20 +15,16 @@ const commandLine = (commands, {delimiter} = {}) => {
     if (desc.autocomplete) {
       command.autocomplete(desc.autocomplete)
     }
-    command
-      .option('-t, --timeout <timeout>')
-      .action((argsAndOptions, callback) => {
-        const {options, ...args} = argsAndOptions
-        Promise.resolve()
-          .then(() => desc.action(args, options))
-          .then(callback)
-      })
+    command.option('-t, --timeout <timeout>').action((argsAndOptions, callback) => {
+      const {options, ...args} = argsAndOptions
+      Promise.resolve()
+        .then(() => desc.action(args, options))
+        .then(callback)
+    })
   })
 
-  const delimiterContent = () => `[${(new Date()).toLocaleString()}] ${delimiter || '$~>'} `
-  vorpal
-    .delimiter(delimiterContent())
-    .show()
+  const delimiterContent = () => `[${new Date().toLocaleString()}] ${delimiter || '$~>'} `
+  vorpal.delimiter(delimiterContent()).show()
 
   setInterval(() => vorpal.ui.delimiter(delimiterContent()), 1000)
 }

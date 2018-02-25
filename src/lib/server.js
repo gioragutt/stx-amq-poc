@@ -4,14 +4,18 @@ const RpcError = require('./exceptions')
 const {requestQueueName} = require('./utils')
 const {respondToRpc, parseMessage} = require('./mq')
 
-const mergeRouters = routers => routers.reduce((allHandlers, router) =>
-  Object.keys(router.methodHandlers).reduce((acc, method) => {
-    if (acc[method]) {
-      throw new RpcError('handler for method already defined', {method})
-    }
-    acc[method] = router.methodHandlers[method]
-    return acc
-  }, allHandlers), {})
+const mergeRouters = routers =>
+  routers.reduce(
+    (allHandlers, router) =>
+      Object.keys(router.methodHandlers).reduce((acc, method) => {
+        if (acc[method]) {
+          throw new RpcError('handler for method already defined', {method})
+        }
+        acc[method] = router.methodHandlers[method]
+        return acc
+      }, allHandlers),
+    {}
+  )
 
 const subscribeHandler = (client, origin, method, handler) =>
   client.subscribe({destination: origin}, (subscriptionError, message) => {
@@ -42,7 +46,7 @@ const subscribeHandlers = (client, handlers, baseQueueName) =>
     return acc
   }, {})
 
-class QueueRpcServer {
+class MqServer {
   constructor() {
     this.routers = []
     this.subscriptions = {}
@@ -70,4 +74,4 @@ class QueueRpcServer {
   }
 }
 
-module.exports = QueueRpcServer
+module.exports = MqServer

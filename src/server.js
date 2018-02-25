@@ -20,18 +20,19 @@ const connectOptions = {
 const db = new Database()
 
 const readWriteRouter = new QueueRpcRouter()
-readWriteRouter.method('add', ({body: {number}}) => db.add(number))
-readWriteRouter.method('remove', ({body: {number}}) => db.remove(number))
-readWriteRouter.method('clear', () => db.clear())
+readWriteRouter.respondTo('add', ({body: {number}}) => db.add(number))
+readWriteRouter.respondTo('remove', ({body: {number}}) => db.remove(number))
+readWriteRouter.respondTo('clear', () => db.clear())
 
 const readOnlyRouter = new QueueRpcRouter()
-readOnlyRouter.method('query', () => db.query())
-readOnlyRouter.method('echo', ({body: {message}}) => message)
+readOnlyRouter.respondTo('query', () => db.query())
+readOnlyRouter.respondTo('echo', ({body: {message}}) => message)
 
 const server = new QueueRpcServer()
 server.use(readWriteRouter)
 server.use(readOnlyRouter)
 
-server.start(connectOptions)
+server
+  .start(connectOptions)
   .then(config => logger.info(config, 'connected to active mq'))
-  .catch(error => logger.error(error, 'failed to connect to active mq'))
+  .catch(error => logger.error({error}, 'failed to connect to active mq'))
