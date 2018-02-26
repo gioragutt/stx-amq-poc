@@ -35,7 +35,7 @@ class Database {
     number = tryParseNumber(number, 'REMOVE')
     if (!this.list.has(number)) {
       logger.debug(`${number} not in the list`)
-      return this.items
+      return `${number} not in the list`
     }
 
     logger.info(`Removing ${number} from the list`)

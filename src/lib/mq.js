@@ -1,4 +1,4 @@
-const uuid = require('uuid')
+const RpcError = require('./exceptions')
 const {encodeContent, decodeContent, toStompHeaders, fromStompHeaders} = require('./utils')
 
 const parseMessage = message =>
@@ -22,75 +22,75 @@ const sendFrame = (client, headers, message) => {
   frame.end()
 }
 
-const awaitRpcResponse = (resolve, reject, client, destination) => {
-  const subscription = client.subscribe({destination}, (subscriptionError, message) => {
+const subscribeToQueue = (client, logger, destination, getSubscriber) =>
+  client.subscribe({destination}, (subscriptionError, message) => {
     if (subscriptionError) {
-      reject(subscriptionError)
+      throw new RpcError('subscription error', subscriptionError)
+    }
+
+    const headers = fromStompHeaders(message.headers)
+    const subscriber = getSubscriber(headers.correlationId)
+
+    if (!subscriber) {
+      logger.error({destination, correlationId: headers.correlationId}, 'no subscriber for message')
       return
     }
 
-    subscription.unsubscribe()
     message.readString('utf-8', (messageError, responseContent) => {
       if (messageError) {
-        reject(messageError)
+        subscriber.reject(messageError)
         return
       }
 
-      const headers = fromStompHeaders(message.headers)
       const body = decodeContent(responseContent, headers.contentType)
       const response = {headers, body}
       if (headers.ok === 'false') {
-        reject(response)
+        subscriber.reject(response)
       } else {
-        resolve(response)
+        subscriber.resolve(response)
       }
     })
   })
-  return subscription
-}
-
-const setRequestTimeout = (reject, timeout, subscription) => {
-  if (timeout > 0) {
-    setTimeout(() => {
-      subscription.unsubscribe()
-      reject(new Error(`RPC request timed out after ${timeout} ms`))
-    }, timeout)
-  }
-}
 
 /**
  * Sends a message and awaits a response
  * @param {*} client stompit client instance
- * @param {(Object|string|*)} content message to send.
+ * @param {(Object|String|*)} content message to send.
  *  should be a JS object or JSON string by default,
  *  otherwise a different `content-type` should be specified in the headers
- * @param {string} destinationQueue queue to which the message will be sent to
- * @param {string} responseQueue queue to which the response to the message will be sent
- * @param {{headers: Object, timeout: number}} [options] options to customize the request
+ * @param {String} destinationQueue queue to which the message will be sent to
+ * @param {String} correlationId unique identifier to distinguish between different calls to the same method
+ * @param {String} responseQueue queue to which the response to the message will be sent
+ * @param {{headers: Object}} [options] options to customize the request
  *  headers:
  *    custom headers to send with the request.
  *    headers will always contain the `content-type` header, which is `aplication-json` by default
  *
  *  timeout:
  *    if specified above 0, will time out after `timeout` milliseconds if a response is not received
+ * @param logger logger to use for logging(will always use debug level)
  * @returns {Promise<{headers: Object, body: *}>} the response received, comprised of the headers and the body
  */
-const sendRpc = (client, content, destinationQueue, responseQueue, {headers = {}, timeout = 0} = {}) =>
-  new Promise((resolve, reject) => {
-    const correlationId = uuid()
-    const sendHeaders = {
-      ...defaultHeaders,
-      ...headers,
-      destination: destinationQueue,
-      replyTo: responseQueue,
-      correlationId,
-    }
+const sendRpc = (
+  client,
+  content,
+  destinationQueue,
+  correlationId,
+  responseQueue,
+  {headers = {}} = {},
+  logger,
+) => {
+  const sendHeaders = {
+    ...defaultHeaders,
+    ...headers,
+    destination: destinationQueue,
+    replyTo: responseQueue,
+    correlationId,
+  }
 
-    sendFrame(client, sendHeaders, content)
-
-    const subscription = awaitRpcResponse(resolve, reject, client, responseQueue)
-    setRequestTimeout(reject, timeout, subscription)
-  })
+  logger.debug({sendHeaders, content}, 'sending frame')
+  sendFrame(client, sendHeaders, content)
+}
 
 const responseHeaders = (requestHeaders) => {
   const {'reply-to': destination, ...rest} = requestHeaders
@@ -123,6 +123,7 @@ const respondToRpc = (client, message, handler, body) =>
   })
 
 module.exports = {
+  subscribeToQueue,
   parseMessage,
   sendRpc,
   respondToRpc,

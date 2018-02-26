@@ -1,5 +1,5 @@
 const RpcError = require('./exceptions')
-const {upperCase} = require('lodash')
+const {stripSlash} = require('./utils')
 
 class Router {
   constructor() {
@@ -12,12 +12,12 @@ class Router {
    * @param {Function} handler callback to handle the request. May be sync or async
    */
   respondTo(method, handler) {
+    method = stripSlash(method)
     if (typeof handler !== 'function') {
       const type = Object.prototype.toString.call(handler)
       throw new RpcError(`QueueRpcRouter.method() requires a callback but got a ${type}`)
     }
 
-    method = upperCase(method)
     if (this.methodHandlers[method]) {
       throw new RpcError(`handler for method ${method} already defined`)
     }

@@ -1,23 +1,24 @@
 const stompit = require('stompit')
 const {loggers: {logger}} = require('@welldone-software/node-toolbelt')
 const RpcError = require('./exceptions')
-const {requestQueueName} = require('./utils')
+const {requestQueueName, parseConnectionString} = require('./utils')
 const {respondToRpc, parseMessage} = require('./mq')
 
 const mergeRouters = routers =>
   routers.reduce(
     (allHandlers, router) =>
       Object.keys(router.methodHandlers).reduce((acc, method) => {
-        if (acc[method]) {
+        const origin = requestQueueName(method)
+        if (acc[origin]) {
           throw new RpcError('handler for method already defined', {method})
         }
-        acc[method] = router.methodHandlers[method]
+        acc[origin] = router.methodHandlers[method]
         return acc
       }, allHandlers),
     {}
   )
 
-const subscribeHandler = (client, origin, method, handler) =>
+const subscribeHandler = (client, origin, handler) =>
   client.subscribe({destination: origin}, (subscriptionError, message) => {
     if (subscriptionError) {
       logger.error(subscriptionError, 'subscription error')
@@ -30,18 +31,13 @@ const subscribeHandler = (client, origin, method, handler) =>
         return body
       })
       .then(body => respondToRpc(client, message, handler, body))
-      .then(({headers, response}) => {
-        logger.info({headers, response, origin, method}, 'handled method')
-      })
-      .catch((error) => {
-        logger.error({error, origin, method}, 'error handling method')
-      })
+      .then(({headers, response}) => logger.info({headers, response, origin}, 'handled method'))
+      .catch(error => logger.error({error, origin}, 'error handling method'))
   })
 
-const subscribeHandlers = (client, handlers, baseQueueName) =>
-  Object.entries(handlers).reduce((acc, [method, handler]) => {
-    const origin = requestQueueName(baseQueueName, method)
-    const subscription = subscribeHandler(client, origin, method, handler)
+const subscribeHandlers = (client, handlers) =>
+  Object.entries(handlers).reduce((acc, [origin, handler]) => {
+    const subscription = subscribeHandler(client, origin, handler)
     acc[subscription.getId()] = subscription
     return acc
   }, {})
@@ -50,14 +46,17 @@ class MqServer {
   constructor() {
     this.routers = []
     this.subscriptions = {}
-    this.baseQueueName = 'METHOD'
   }
 
   use(router) {
     this.routers.push(router)
   }
 
-  start(config) {
+  start(configOrConnectionString) {
+    const config = typeof configOrConnectionString === 'string'
+      ? parseConnectionString(configOrConnectionString)
+      : configOrConnectionString
+
     return new Promise((resolve, reject) => {
       stompit.connect(config, (connectionError, client) => {
         if (connectionError) {
@@ -67,7 +66,7 @@ class MqServer {
 
         const handlers = mergeRouters(this.routers)
         logger.info(Object.keys(handlers), 'Listening for the following methods')
-        this.subscriptions = subscribeHandlers(client, handlers, this.baseQueueName)
+        this.subscriptions = subscribeHandlers(client, handlers)
         resolve(config)
       })
     })

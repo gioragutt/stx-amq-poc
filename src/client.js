@@ -3,7 +3,7 @@ require('app-module-path').addPath(__dirname)
 const pino = require('pino')
 const cli = require('./lib/cli')
 const {activeMqHost, activeMqPort, activeMqUsername, activeMqPassword, logLevel} = require('config')
-const QueueRpcClient = require('./lib/client')
+const MqClient = require('./lib/client')
 
 const pretty = pino.pretty()
 pretty.pipe(process.stdout)
@@ -24,19 +24,16 @@ const defaultOptions = {
   timeout: 3000,
 }
 
-const callMethodOnClient = (client, methodName, args, options) => {
-  methodName = methodName.toUpperCase()
-  return client
-    .call(methodName, args || {}, {...defaultOptions, ...options})
-    .then(({body}) => logger.info(body))
-    .catch(e => logger.error(e))
-}
+const callMethodOnClient = (client, methodName, args, options) => client
+  .call(methodName, args || {}, {...defaultOptions, ...options})
+  .then(({body}) => logger.info(body))
+  .catch(e => logger.error(e))
 
 const callMethod = (client, method, argsMapper = a => a) => (args, options) =>
   callMethodOnClient(client, method, argsMapper(args), options)
 
 logger.info('Connecting to ActiveMQ')
-QueueRpcClient.connect(connectOptions, {logger})
+MqClient.connect(connectOptions, {logger})
   .then((client) => {
     logger.info('Connected')
     const commands = [
@@ -44,32 +41,32 @@ QueueRpcClient.connect(connectOptions, {logger})
         command: 'add <number>',
         description: 'Add a number to the list',
         alias: 'a',
-        action: callMethod(client, 'ADD'),
+        action: callMethod(client, 'add'),
       },
       {
         command: 'remove <number>',
         description: 'Removes a number from the list',
         alias: 'rm',
-        action: callMethod(client, 'REMOVE'),
+        action: callMethod(client, 'remove'),
       },
       {
         command: 'query',
         description: 'Shows the list',
         alias: 'ls',
-        action: callMethod(client, 'QUERY'),
+        action: callMethod(client, 'query'),
       },
       {
         command: 'clear',
         description: 'Clears the list',
         alias: 'c',
-        action: callMethod(client, 'CLEAR'),
+        action: callMethod(client, 'clear'),
       },
       {
         command: 'echo <message...>',
-        action: callMethod(client, 'ECHO', ({message, ...rest}) => ({message: message.join(' '), ...rest})),
+        action: callMethod(client, 'echo', ({message, ...rest}) => ({message: message.join(' '), ...rest})),
       },
     ]
 
-    cli(commands, {delimiter: 'ActiveMq $'})
+    cli(commands, {delimiter: 'ActiveMq $', onExit: () => client.disconnect()})
   })
   .catch(e => logger.error(e, 'failed to connect to ActiveMQ'))

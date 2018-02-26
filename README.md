@@ -66,8 +66,6 @@ This will open up an interactive terminal for you to run commands.
 
 Start by running the `help` command to see all available commands
 
-
-
 Useful variables:
 
 * **LOG_LEVEL** - sets up the `pino` logger level
@@ -84,6 +82,7 @@ LOG_LEVEL=debug  npm run client
 
 These variables are available for both client and server
 
+* **ACTIVE_MQ_PATH** - connection string to the ActiveMQ instance (f.e *username:password@localhost:61613*)
 * **ACTIVE_MQ_HOST** - host of the ActiveMQ instance (f.e *localhost*)
 * **ACTIVE_MQ_PORT** - port of the ActiveMQ instance `STOMP` endpoint (f.e *61613*)
 * **ACTIVE_MQ_USERNAME** - `optional` username for authentification
