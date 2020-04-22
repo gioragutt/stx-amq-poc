@@ -30,6 +30,6 @@
     "nodemon": "1.15.1",
     "prettier": "1.10.2",
     "prettier-eslint": "8.8.1",
-    "prettier-eslint-cli": "4.7.1"
+    "prettier-eslint-cli": "5.0.0"
   }
 }
