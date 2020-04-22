@@ -18,7 +18,7 @@
     "app-module-path": "^2.2.0",
     "connection-string": "^0.4.1",
     "lodash": "^4.17.5",
-    "pino": "^4.11.0",
+    "pino": "^6.0.0",
     "stompit": "^0.25.0",
     "uuid": "^3.2.1",
     "vorpal": "^1.12.0"
