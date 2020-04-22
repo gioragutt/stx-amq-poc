@@ -16,7 +16,7 @@
   "dependencies": {
     "@welldone-software/node-toolbelt": "^1.2.0",
     "app-module-path": "^2.2.0",
-    "connection-string": "^0.4.1",
+    "connection-string": "^3.0.0",
     "lodash": "^4.17.5",
     "pino": "^4.11.0",
     "stompit": "^0.25.0",
